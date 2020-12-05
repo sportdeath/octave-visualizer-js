@@ -5,7 +5,7 @@ var saturation = 0.7;
 let canvas = document.getElementById("harmonic_visualizer");
 let ctx = canvas.getContext("2d");
 
-function draw_radial(path, index) {
+function draw_radial(index) {
   // Upper bound on the radius from triangle inequality
   var radius = canvas.height/2 +  canvas.width/2;
 
@@ -13,7 +13,7 @@ function draw_radial(path, index) {
   var angle = (2 * Math.PI * index) / num_slices;
   var x = canvas.width/2 + radius * Math.cos(angle);
   var y = canvas.height/2 + radius * Math.sin(angle);
-  path.lineTo(x, y);
+  ctx.lineTo(x, y);
 }
 
 function hsv_f(n, hue) {
@@ -28,15 +28,17 @@ function hsv2rgb(hue, value) {
 
 function draw_triangle(index, brightness) {
   // Draw the triangle
-  var path = new Path2D();
-  path.moveTo(canvas.width/2, canvas.height/2);
-  draw_radial(path, index);
-  draw_radial(path, index+1);
+  ctx.beginPath();
+  ctx.moveTo(canvas.width/2, canvas.height/2);
+  draw_radial(index);
+  draw_radial(index+1);
+  ctx.closePath();
 
+  // Color it
   var hue = index/num_slices;
   var rgb = hsv2rgb(hue, brightness);
   ctx.fillStyle = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
-  ctx.fill(path);
+  ctx.fill();
 }
 
 function draw_screen() {
