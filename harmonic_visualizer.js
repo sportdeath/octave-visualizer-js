@@ -1,16 +1,24 @@
 // Constants
 var num_slices = 22;
 var saturation = 0.7;
+var triangle_fatness = 0.05; // percent
 
 let canvas = document.getElementById("harmonic_visualizer");
 let ctx = canvas.getContext("2d");
 
-function draw_radial(index) {
+function draw_radial(index, start) {
   // Upper bound on the radius from triangle inequality
   var radius = canvas.height/2 +  canvas.width/2;
+  
+  // Make the triangles a little fat for aliasing
+  if (start) {
+    index -= triangle_fatness;
+  } else {
+    index += triangle_fatness;
+  }
+  var angle = (2 * Math.PI * index) / num_slices;
 
   // Draw a line out
-  var angle = (2 * Math.PI * index) / num_slices;
   var x = canvas.width/2 + radius * Math.cos(angle);
   var y = canvas.height/2 + radius * Math.sin(angle);
   ctx.lineTo(x, y);
@@ -30,14 +38,22 @@ function draw_triangle(index, brightness) {
   // Draw the triangle
   ctx.beginPath();
   ctx.moveTo(canvas.width/2, canvas.height/2);
-  draw_radial(index);
-  draw_radial(index+1);
+  draw_radial(index, true);
+  draw_radial(index+1, false);
   ctx.closePath();
 
   // Color it
   var hue = index/num_slices;
   var rgb = hsv2rgb(hue, brightness);
   ctx.fillStyle = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+  ctx.fill();
+}
+
+function draw_circle() {
+  ctx.beginPath();
+  ctx.arc(canvas.width/2, canvas.height/2, 10, 0, 2 * Math.PI);
+  ctx.closePath();
+  ctx.fillStyle = "black";
   ctx.fill();
 }
 
@@ -53,6 +69,9 @@ function draw_screen() {
   for (i = 0; i < num_slices; i++) {
     draw_triangle(i, 1 - 0.1 * Math.random());
   }
+
+  // Add a center circle
+  draw_circle();
 }
 
 function fullscreen(){
