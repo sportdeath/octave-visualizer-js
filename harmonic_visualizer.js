@@ -1,11 +1,24 @@
 function HarmonicVisualizer() {
+  // Initialize the color wheel
   this.cw = new ColorWheel();
   this.cw_values = new Array(NUM_SLICES);
+
+  // Set up the audio
+  this.ctx = new (window.AudioContext || window.webkitAudioContext)();
   this.getMicrophoneInput();
-  this.animate();
 }
 
 HarmonicVisualizer.prototype.getMicrophoneInput = function() {
+  navigator.mediaDevices.getUserMedia({audio: true})
+  .then(this.onStream.bind(this));
+}
+
+HarmonicVisualizer.prototype.onStream = function(stream) {
+  var input = this.ctx.createMediaStreamSource(stream);
+  var analyser = this.ctx.createAnalyser();
+
+  // Animate!
+  this.animate();
 }
 
 HarmonicVisualizer.prototype.animate = function() {
