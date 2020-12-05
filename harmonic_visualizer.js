@@ -53,6 +53,17 @@ function draw_screen() {
   }
 }
 
+function fullscreen(){
+  if (canvas.requestFullScreen) {
+    canvas.requestFullScreen();
+  } else if (canvas.webkitRequestFullscreen) {
+    canvas.webkitRequestFullscreen();
+  } else if (canvas.mozRequestFullScreen) {
+    canvas.mozRequestFullScreen();
+  }
+}
+canvas.addEventListener("click", fullscreen);
+
 // Run it!
 function animate() {
   requestAnimationFrame(animate);
