@@ -5,10 +5,6 @@ var saturation = 0.7;
 let canvas = document.getElementById("harmonic_visualizer");
 let ctx = canvas.getContext("2d");
 
-// Scale the page appropriately
-canvas.width = canvas.clientWidth;
-canvas.height = canvas.clientHeight;
-
 function draw_radial(path, index) {
   // Upper bound on the radius from triangle inequality
   var radius = canvas.height/2 +  canvas.width/2;
@@ -43,6 +39,23 @@ function draw_triangle(index, brightness) {
   ctx.fill(path);
 }
 
-for (i = 0; i < num_slices; i++) {
-  draw_triangle(i, 1);
+function draw_screen() {
+  // Clear existing content
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Scale the page appropriately
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+
+  // Draw the triangles
+  for (i = 0; i < num_slices; i++) {
+    draw_triangle(i, 1 - 0.1 * Math.random());
+  }
 }
+
+// Run it!
+function animate() {
+  requestAnimationFrame(animate);
+  draw_screen();
+}
+animate();
