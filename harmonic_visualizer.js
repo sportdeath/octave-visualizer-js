@@ -28,21 +28,21 @@ HarmonicVisualizer.prototype.onStream = function(stream) {
 }
 
 HarmonicVisualizer.prototype.animate = function() {
-  // Fetch the fft data!
-  this.analyser.getFloatFrequencyData(this.audio_data);
+  // Fetch the time series
+  this.analyser.getFloatTimeDomainData(this.audio_data);
 
+  // TODO: do some computation with C++/Emscripten
   var total_volume = 0;
   for (var i = 0; i < this.analyser.frequencyBinCount; i++) {
-    this.audio_data[i] -= this.analyser.minDecibels;
-    this.audio_data[i] /= this.analyser.maxDecibels - this.analyser.minDecibels;
-    total_volume += this.audio_data[i];
+    total_volume += Math.abs(this.audio_data[i]);
   }
   var avg_volume = total_volume/(this.analyser.frequencyBinCount);
+  avg_volume = Math.sqrt(avg_volume);
 
+  // Color the wheel
   for (var i = 0; i < NUM_SLICES; i++) {
     this.cw_values[i] = avg_volume;
   }
-
   this.cw.draw(this.cw_values);
   requestAnimationFrame(this.animate.bind(this));
 }
