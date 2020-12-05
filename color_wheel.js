@@ -1,93 +1,85 @@
 // Constants
-var num_slices = 22;
-var saturation = 0.7;
-var triangle_fatness = 0.05; // percent
+const NUM_SLICES =  22;
+const SATURATION = 0.7; // in [0,1]
+const TRIANGLE_FATNESS = 0.05; // percent
+const CIRCLE_RADIUS = 10; // pixels
 
-let canvas = document.getElementById("harmonic_visualizer");
-let ctx = canvas.getContext("2d");
+function ColorWheel() {
+  this.canvas = document.getElementById("color_wheel");
+  this.canvas.addEventListener("click", this.canvas.requestFullscreen);
+}
 
-function draw_radial(index, start) {
+ColorWheel.prototype.draw = function(values) {
+  // Clear existing content
+  this.canvas.getContext('2d').clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+  // Scale the page appropriately
+  this.canvas.width = this.canvas.clientWidth;
+  this.canvas.height = this.canvas.clientHeight;
+
+  // Draw the triangles
+  for (i = 0; i < NUM_SLICES; i++) {
+    this.drawTriangle(i, values[i]);
+  }
+
+  // Add a center circle
+  this.drawCenterCircle();
+}
+
+ColorWheel.prototype.drawTriangle = function(index, value) {
+  let ctx = this.canvas.getContext("2d");
+
+  // Draw the triangle
+  ctx.beginPath();
+  ctx.moveTo(this.canvas.width/2, this.canvas.height/2);
+  this.drawRadial(index, true);
+  this.drawRadial(index+1, false);
+  ctx.closePath();
+
+  // Color it
+  var hue = index/NUM_SLICES;
+  var rgb = hsv2rgb(hue, value);
+  ctx.fillStyle = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+  ctx.fill();
+}
+
+ColorWheel.prototype.drawRadial = function(index, start) {
   // Upper bound on the radius from triangle inequality
-  var radius = canvas.height/2 +  canvas.width/2;
+  var radius = this.canvas.height/2 +  this.canvas.width/2;
   
   // Make the triangles a little fat for aliasing
   if (start) {
-    index -= triangle_fatness;
+    index -= TRIANGLE_FATNESS;
   } else {
-    index += triangle_fatness;
+    index += TRIANGLE_FATNESS;
   }
-  var angle = (2 * Math.PI * index) / num_slices;
+  var angle = (2 * Math.PI * index) / NUM_SLICES;
 
   // Draw a line out
-  var x = canvas.width/2 + radius * Math.cos(angle);
-  var y = canvas.height/2 + radius * Math.sin(angle);
-  ctx.lineTo(x, y);
+  var x = this.canvas.width/2 + radius * Math.cos(angle);
+  var y = this.canvas.height/2 + radius * Math.sin(angle);
+  this.canvas.getContext('2d').lineTo(x, y);
 }
 
-function hsv_f(n, hue) {
-  var a = (n + hue * 6) % 6;
-  var b = Math.max(0, Math.min(a, 4 - a, 1));
-  return 255 * (1 - saturation * b);
+ColorWheel.prototype.drawCenterCircle = function() {
+  // Make a little black circle in the center of the page
+  let ctx = this.canvas.getContext("2d");
+  ctx.beginPath();
+  ctx.arc(this.canvas.width/2,
+          this.canvas.height/2,
+          CIRCLE_RADIUS,
+          0, 2*Math.PI);
+  ctx.closePath();
+  ctx.fillStyle = "black";
+  ctx.fill();
 }
 
 function hsv2rgb(hue, value) {
   return [value * hsv_f(5, hue), value * hsv_f(3, hue), value * hsv_f(1, hue)];
 }
 
-function draw_triangle(index, brightness) {
-  // Draw the triangle
-  ctx.beginPath();
-  ctx.moveTo(canvas.width/2, canvas.height/2);
-  draw_radial(index, true);
-  draw_radial(index+1, false);
-  ctx.closePath();
-
-  // Color it
-  var hue = index/num_slices;
-  var rgb = hsv2rgb(hue, brightness);
-  ctx.fillStyle = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
-  ctx.fill();
+function hsv_f(n, hue) {
+  var a = (n + hue * 6) % 6;
+  var b = Math.max(0, Math.min(a, 4 - a, 1));
+  return 255 * (1 - SATURATION * b);
 }
-
-function draw_circle() {
-  ctx.beginPath();
-  ctx.arc(canvas.width/2, canvas.height/2, 10, 0, 2 * Math.PI);
-  ctx.closePath();
-  ctx.fillStyle = "black";
-  ctx.fill();
-}
-
-function draw_screen() {
-  // Clear existing content
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // Scale the page appropriately
-  canvas.width = canvas.clientWidth;
-  canvas.height = canvas.clientHeight;
-
-  // Draw the triangles
-  for (i = 0; i < num_slices; i++) {
-    draw_triangle(i, 1 - 0.1 * Math.random());
-  }
-
-  // Add a center circle
-  draw_circle();
-}
-
-function fullscreen(){
-  if (canvas.requestFullScreen) {
-    canvas.requestFullScreen();
-  } else if (canvas.webkitRequestFullscreen) {
-    canvas.webkitRequestFullscreen();
-  } else if (canvas.mozRequestFullScreen) {
-    canvas.mozRequestFullScreen();
-  }
-}
-canvas.addEventListener("click", fullscreen);
-
-// Run it!
-function animate() {
-  requestAnimationFrame(animate);
-  draw_screen();
-}
-animate();
