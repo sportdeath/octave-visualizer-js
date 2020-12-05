@@ -23,6 +23,10 @@ HarmonicVisualizer.prototype.onStream = function(stream) {
   // Create storage for data
   this.audio_data = new Float32Array(this.analyser.frequencyBinCount);
 
+  // Initialize the object!
+  this.octave = new Module.Octave(this.analyser.fftSize, NUM_SLICES);
+  alert(this.octave.get_audio_size());
+
   // Animate!
   this.animate();
 }
