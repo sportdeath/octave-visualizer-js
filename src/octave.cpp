@@ -38,10 +38,10 @@ std::vector<float> & Octave::audio_to_slices(const std::vector<float> & audio) {
   }
 
   // Compute the FFT
-  //fft(window);
-  //fft(window_d);
+  fft(window);
+  fft(window_d);
 
-  for (size_t i = 0; i < window.size(); i++) {
+  for (size_t i = 0; i < window.size()/2 + 1; i++) {
     // Compute the frequency reassignment
     float freq = (2 * M_PI * i * sample_rate)/float(window.size());
     float dphase_dt = -std::imag(window_d[i] * std::conj(window[i])/std::norm(window[i]));
@@ -61,6 +61,27 @@ std::vector<float> & Octave::audio_to_slices(const std::vector<float> & audio) {
   }
 
   return slices;
+}
+
+void Octave::fft(ComplexArray & x) {
+  // Source: https://tfetimes.com/c-fast-fourier-transform/
+  const size_t N = x.size();
+  if (N <= 1) return;
+
+  // Divide
+  ComplexArray even = x[std::slice(0, N/2, 2)];
+  ComplexArray  odd = x[std::slice(1, N/2, 2)];
+
+  // conquer
+  fft(even);
+  fft(odd);
+
+  // combine
+  for (size_t k = 0; k < N/2; k++) {
+    Complex t = std::polar(1.0, -2 * M_PI * k / N) * odd[k];
+    x[k    ] = even[k] + t;
+    x[k+N/2] = even[k] - t;
+  }
 }
 
 // Binding code

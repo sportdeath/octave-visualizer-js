@@ -2,7 +2,7 @@
 #include <valarray>
 #include <complex>
 
-typedef std::complex<float> Complex;
+typedef std::complex<double> Complex;
 typedef std::valarray<Complex> ComplexArray;
 
 class Octave {
