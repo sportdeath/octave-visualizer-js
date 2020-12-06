@@ -1,4 +1,4 @@
-const FFT_SIZE = 4096;
+const FFT_SIZE = 2048;
 
 function HarmonicVisualizer() {
   // Initialize the color wheel

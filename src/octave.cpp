@@ -46,18 +46,21 @@ std::vector<float> & Octave::audio_to_slices(const std::vector<float> & audio) {
     float freq = (2 * M_PI * i * sample_rate)/float(window.size());
     float dphase_dt = -std::imag(window_d[i] * std::conj(window[i])/std::norm(window[i]));
     float freq_reassigned = freq + dphase_dt;
+    //if (freq_reassigned <= 0) continue;
+
+    if (freq_reassigned < 2 * M_PI * 60 or freq_reassigned > 2 * M_PI * 3000) continue;
 
     // Wrap it in the octave
     float wrapped_freq = std::fmod(std::log2(freq_reassigned), 1);
     while (wrapped_freq < 0) wrapped_freq += 1;
 
     // Find the nearest bin
-    // TODO make a linear interpolation
-    int nearest_bin = std::round(wrapped_freq * slices.size());
-    nearest_bin = nearest_bin % slices.size();
-
-    // Place the value
-    slices[nearest_bin] += std::abs(window[i]);
+    float approx_bin = wrapped_freq * slices.size();
+    int left_bin = std::floor(approx_bin);
+    float right = approx_bin - left_bin;
+    float value = std::norm(window[i]);
+    slices[left_bin % slices.size()] += (1 - right) * value;
+    slices[(left_bin + 1) % slices.size()] += right * value;
   }
 
   return slices;

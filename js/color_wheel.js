@@ -1,5 +1,5 @@
 // Constants
-const NUM_SLICES =  22;
+const NUM_SLICES =  50;
 const SATURATION = 0.7; // in [0,1]
 const TRIANGLE_FATNESS = 0.05; // percent
 const CIRCLE_RADIUS = 10; // pixels
