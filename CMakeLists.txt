@@ -14,6 +14,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/js")
 
+include_directories(include)
 add_executable(${PROJECT_NAME} src/octave.cpp)
 
 set(CMAKE_EXECUTABLE_SUFFIX ".wasm.js")

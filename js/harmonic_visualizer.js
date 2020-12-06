@@ -28,7 +28,7 @@ HarmonicVisualizer.prototype.onStream = function(stream) {
   this.audio_data_vec.resize(FFT_SIZE, 0);
 
   // Initialize the object!
-  this.octave = new Module.Octave(FFT_SIZE, NUM_SLICES);
+  this.octave = new Module.Octave(FFT_SIZE, NUM_SLICES, this.ctx.sampleRate);
 
   // Animate!
   this.animate();
@@ -48,7 +48,7 @@ HarmonicVisualizer.prototype.animate = function() {
 
   // Color the wheel
   for (var i = 0; i < NUM_SLICES; i++) {
-    this.cw_values[i] = slices[i];
+    this.cw_values[i] = slices.get(i);
   }
   this.cw.draw(this.cw_values);
   requestAnimationFrame(this.animate.bind(this));
