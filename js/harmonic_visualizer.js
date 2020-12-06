@@ -1,4 +1,4 @@
-const FFT_SIZE = 1024;
+const FFT_SIZE = 4096;
 
 function HarmonicVisualizer() {
   // Initialize the color wheel
@@ -46,9 +46,15 @@ HarmonicVisualizer.prototype.animate = function() {
   // Extract the harmonic components with C++
   var slices = this.octave.audioToSlices(this.audio_data_vec);
 
+  // Normalize it 
+  var slices_max = slices.get(0);
+  for (var i = 0; i < NUM_SLICES; i++) {
+    slices_max = Math.max(slices_max, slices.get(i));
+  }
+
   // Color the wheel
   for (var i = 0; i < NUM_SLICES; i++) {
-    this.cw_values[i] = slices.get(i);
+    this.cw_values[i] = slices.get(i)/slices_max;
   }
   this.cw.draw(this.cw_values);
   requestAnimationFrame(this.animate.bind(this));

@@ -33,7 +33,7 @@ std::vector<float> & Octave::audio_to_slices(const std::vector<float> & audio) {
 
   // Window the audio
   for (size_t i = 0; i < window.size(); i++) {
-    window[i] = hann[i] * audio[i];
+    window[i]   = hann[i]   * audio[i];
     window_d[i] = hann_d[i] * audio[i];
   }
 
