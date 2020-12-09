@@ -1,17 +1,16 @@
 // Constants
-const NUM_SLICES =  50;
 const SATURATION = 0.7; // in [0,1]
 const TRIANGLE_FATNESS = 0.01; // radians
 const CIRCLE_RADIUS = 10; // pixels
 
-function ColorWheel() {
+function ColorWheel(numSlices) {
   // Initialize SVG
   this.svg = createSVGElement('svg', document.body);
   this.svg.addEventListener("click", this.svg.requestFullscreen);
 
   // Initialize triangles
-  this.triangles = new Array(NUM_SLICES);
-  for (var i = 0; i < NUM_SLICES; i++) {
+  this.triangles = new Array(numSlices);
+  for (var i = 0; i < this.triangles.length; i++) {
     this.triangles[i] = createSVGElement('polygon', this.svg);
   }
 
@@ -29,8 +28,8 @@ ColorWheel.prototype.draw = function(values) {
   }
 
   // Color the triangles
-  for (var i = 0; i < NUM_SLICES; i++) {
-    var hue = i/NUM_SLICES;
+  for (var i = 0; i < this.triangles.length; i++) {
+    var hue = i/this.triangles.length;
     var rgb = hsv2rgb(hue, values[i]);
     this.triangles[i].setAttribute("fill", `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`);
   }
@@ -47,14 +46,14 @@ ColorWheel.prototype.resize = function() {
 
   // Move and scale triangles
   var radius = this.w/2 + this.h/2;
-  for (var i = 0; i < NUM_SLICES; i++) {
+  for (var i = 0; i < this.triangles.length; i++) {
     var points = new Array(6);
     points[0] = 0;
     points[1] = 0;
-    points[2] = radius * Math.cos(indexToAngle(i)-TRIANGLE_FATNESS);
-    points[3] = radius * Math.sin(indexToAngle(i)-TRIANGLE_FATNESS);
-    points[4] = radius * Math.cos(indexToAngle(i+1)+TRIANGLE_FATNESS);
-    points[5] = radius * Math.sin(indexToAngle(i+1)+TRIANGLE_FATNESS);
+    points[2] = radius * Math.cos(this.indexToAngle(i)-TRIANGLE_FATNESS);
+    points[3] = radius * Math.sin(this.indexToAngle(i)-TRIANGLE_FATNESS);
+    points[4] = radius * Math.cos(this.indexToAngle(i+1)+TRIANGLE_FATNESS);
+    points[5] = radius * Math.sin(this.indexToAngle(i+1)+TRIANGLE_FATNESS);
 
     // Convert to string for HTML
     var pointsStr = ""
@@ -75,8 +74,8 @@ function createSVGElement(type, par) {
   return element;
 }
 
-function indexToAngle(index) {
-  return (2 * Math.PI * index) / NUM_SLICES;
+ColorWheel.prototype.indexToAngle = function(index) {
+  return (2 * Math.PI * index) / this.triangles.length;
 }
 
 function hsv2rgb(hue, value) {

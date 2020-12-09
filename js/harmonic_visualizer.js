@@ -1,11 +1,8 @@
 const FFT_SIZE = 2048;
+const NUM_SLICES = 48;
 const NORMALIZATION_TIME = 2000; // Milliseconds
 
 function HarmonicVisualizer() {
-  // Initialize the color wheel
-  this.cw = new ColorWheel();
-  this.cw_values = new Array(NUM_SLICES);
-
   // Set up the audio
   this.ctx = new (window.AudioContext || window.webkitAudioContext)();
   this.getMicrophoneInput();
@@ -23,13 +20,13 @@ HarmonicVisualizer.prototype.onStream = function(stream) {
   this.analyser.fftSize = FFT_SIZE;
   this.audio_in.connect(this.analyser);
 
-  // Create storage for data
-  this.audio_data = new Float32Array(FFT_SIZE);
-  this.audio_data_vec = new Module.VectorFloat();
-  this.audio_data_vec.resize(FFT_SIZE, 0);
+  // Initialize the color wheel
+  this.cw = new ColorWheel(NUM_SLICES);
 
-  // Initialize the object!
-  this.octave = new Module.Octave(FFT_SIZE, NUM_SLICES, this.ctx.sampleRate);
+  // Initialize the octave
+  this.octave = new Octave(FFT_SIZE, NUM_SLICES, this.ctx.sampleRate);
+
+  // Initialize normalization
   this.normalization = 0;
   this.then = Date.now();
 
@@ -39,39 +36,26 @@ HarmonicVisualizer.prototype.onStream = function(stream) {
 
 HarmonicVisualizer.prototype.animate = function() {
   // Fetch the time series
-  this.analyser.getFloatTimeDomainData(this.audio_data);
+  this.analyser.getFloatTimeDomainData(this.octave.audio);
 
-  // Copy it into a vector
-  for (var i = 0; i < this.audio_data.length; i++) {
-    this.audio_data_vec.set(i, this.audio_data[i]);
-  }
+  // Extract the harmonic components
+  this.octave.processAudio();
 
-  // Extract the harmonic components with C++
-  var slices = this.octave.audioToSlices(this.audio_data_vec);
-
-  // Normalize it 
-  var slices_max = slices.get(0);
-  for (var i = 0; i < NUM_SLICES; i++) {
-    slices_max = Math.max(slices_max, slices.get(i));
-  }
-  if (slices_max < 0 || isNaN(slices_max)) {
-    slices_max = 0;
-  }
-  
-  // Slur the normalization
+  // Compute normalization
+  var slicesMax = Math.max(...this.octave.slices);
   var now = Date.now();
-  if (slices_max > this.normalization) {
-    this.normalization = slices_max;
+  if (slicesMax > this.normalization) {
+    this.normalization = slicesMax;
   } else {
     var decay = Math.exp(-(now - this.then)/NORMALIZATION_TIME);
-    this.normalization -= (1 - decay) * (this.normalization - slices_max);
+    this.normalization -= (1 - decay) * (this.normalization - slicesMax);
   }
   this.then = now;
 
   // Color the wheel
-  for (var i = 0; i < NUM_SLICES; i++) {
-    this.cw_values[i] = slices.get(i)/this.normalization;
+  for (var i = 0; i < this.octave.slices.length; i++) {
+    this.octave.slices[i] /= this.normalization;
   }
-  this.cw.draw(this.cw_values);
+  this.cw.draw(this.octave.slices);
   requestAnimationFrame(this.animate.bind(this));
 }
