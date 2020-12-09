@@ -7,6 +7,7 @@ const CIRCLE_RADIUS = 10; // pixels
 function ColorWheel() {
   // Initialize SVG
   this.svg = createSVGElement('svg', document.body);
+  this.svg.addEventListener("click", this.svg.requestFullscreen);
 
   // Initialize triangles
   this.triangles = new Array(NUM_SLICES);
