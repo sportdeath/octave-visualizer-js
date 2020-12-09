@@ -1,77 +1,81 @@
 // Constants
 const NUM_SLICES =  50;
 const SATURATION = 0.7; // in [0,1]
-const TRIANGLE_FATNESS = 0.05; // percent
+const TRIANGLE_FATNESS = 0.01; // radians
 const CIRCLE_RADIUS = 10; // pixels
 
 function ColorWheel() {
-  this.canvas = document.getElementById("color_wheel");
-  this.canvas.addEventListener("click", this.canvas.requestFullscreen);
+  // Initialize SVG
+  this.svg = createSVGElement('svg', document.body);
+
+  // Initialize triangles
+  this.triangles = new Array(NUM_SLICES);
+  for (var i = 0; i < NUM_SLICES; i++) {
+    this.triangles[i] = createSVGElement('polygon', this.svg);
+  }
+
+  // Initialize center circle
+  this.circle = createSVGElement('circle', this.svg);
+  this.circle.setAttribute("fill", "black");
+  this.circle.setAttribute("r", CIRCLE_RADIUS.toString());
 }
 
 ColorWheel.prototype.draw = function(values) {
-  // Clear existing content
-  this.canvas.getContext('2d').clearRect(0, 0, this.canvas.width, this.canvas.height);
-
-  // Scale the page appropriately
-  this.canvas.width = this.canvas.clientWidth;
-  this.canvas.height = this.canvas.clientHeight;
-
-  // Draw the triangles
-  for (i = 0; i < NUM_SLICES; i++) {
-    this.drawTriangle(i, values[i]);
+  // If the client has changed, re-size shapes
+  if (this.h != this.svg.clientWidth ||
+      this.w != this.svg.clientHeight) {
+    this.resize();
   }
 
-  // Add a center circle
-  this.drawCenterCircle();
-}
-
-ColorWheel.prototype.drawTriangle = function(index, value) {
-  let ctx = this.canvas.getContext("2d");
-
-  // Draw the triangle
-  ctx.beginPath();
-  ctx.moveTo(this.canvas.width/2, this.canvas.height/2);
-  this.drawRadial(index, true);
-  this.drawRadial(index+1, false);
-  ctx.closePath();
-
-  // Color it
-  var hue = index/NUM_SLICES;
-  var rgb = hsv2rgb(hue, value);
-  ctx.fillStyle = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
-  ctx.fill();
-}
-
-ColorWheel.prototype.drawRadial = function(index, start) {
-  // Upper bound on the radius from triangle inequality
-  var radius = this.canvas.height/2 +  this.canvas.width/2;
-  
-  // Make the triangles a little fat for aliasing
-  if (start) {
-    index -= TRIANGLE_FATNESS;
-  } else {
-    index += TRIANGLE_FATNESS;
+  // Color the triangles
+  for (var i = 0; i < NUM_SLICES; i++) {
+    var hue = i/NUM_SLICES;
+    var rgb = hsv2rgb(hue, values[i]);
+    this.triangles[i].setAttribute("fill", `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`);
   }
-  var angle = (2 * Math.PI * index) / NUM_SLICES;
-
-  // Draw a line out
-  var x = this.canvas.width/2 + radius * Math.cos(angle);
-  var y = this.canvas.height/2 + radius * Math.sin(angle);
-  this.canvas.getContext('2d').lineTo(x, y);
 }
 
-ColorWheel.prototype.drawCenterCircle = function() {
-  // Make a little black circle in the center of the page
-  let ctx = this.canvas.getContext("2d");
-  ctx.beginPath();
-  ctx.arc(this.canvas.width/2,
-          this.canvas.height/2,
-          CIRCLE_RADIUS,
-          0, 2*Math.PI);
-  ctx.closePath();
-  ctx.fillStyle = "black";
-  ctx.fill();
+ColorWheel.prototype.resize = function() {
+  // Update width and height
+  this.w = this.svg.clientWidth;
+  this.h = this.svg.clientHeight;
+
+  // Move circles to center
+  this.circle.setAttribute("cx", this.w/2);
+  this.circle.setAttribute("cy", this.h/2);
+
+  // Move and scale triangles
+  var radius = this.w/2 + this.h/2;
+  for (var i = 0; i < NUM_SLICES; i++) {
+    var points = new Array(6);
+    points[0] = 0;
+    points[1] = 0;
+    points[2] = radius * Math.cos(indexToAngle(i)-TRIANGLE_FATNESS);
+    points[3] = radius * Math.sin(indexToAngle(i)-TRIANGLE_FATNESS);
+    points[4] = radius * Math.cos(indexToAngle(i+1)+TRIANGLE_FATNESS);
+    points[5] = radius * Math.sin(indexToAngle(i+1)+TRIANGLE_FATNESS);
+
+    // Convert to string for HTML
+    var pointsStr = ""
+    for (var j = 0; j < points.length; j++) {
+      if (j % 2 == 0) {
+        pointsStr += (this.w/2 + points[j]).toString() + ",";
+      } else {
+        pointsStr += (this.h/2 + points[j]).toString() + " ";
+      }
+    }
+    this.triangles[i].setAttribute("points", pointsStr);
+  }
+}
+
+function createSVGElement(type, par) {
+  var element = document.createElementNS("http://www.w3.org/2000/svg", type);
+  par.appendChild(element);
+  return element;
+}
+
+function indexToAngle(index) {
+  return (2 * Math.PI * index) / NUM_SLICES;
 }
 
 function hsv2rgb(hue, value) {
