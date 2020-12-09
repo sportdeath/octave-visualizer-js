@@ -1,4 +1,5 @@
 const FFT_SIZE = 2048;
+const NORMALIZATION_TIME = 2000; // Milliseconds
 
 function HarmonicVisualizer() {
   // Initialize the color wheel
@@ -29,6 +30,8 @@ HarmonicVisualizer.prototype.onStream = function(stream) {
 
   // Initialize the object!
   this.octave = new Module.Octave(FFT_SIZE, NUM_SLICES, this.ctx.sampleRate);
+  this.normalization = 0;
+  this.then = Date.now();
 
   // Animate!
   this.animate();
@@ -51,10 +54,23 @@ HarmonicVisualizer.prototype.animate = function() {
   for (var i = 0; i < NUM_SLICES; i++) {
     slices_max = Math.max(slices_max, slices.get(i));
   }
+  if (slices_max < 0 || isNaN(slices_max)) {
+    slices_max = 0;
+  }
+  
+  // Slur the normalization
+  var now = Date.now();
+  if (slices_max > this.normalization) {
+    this.normalization = slices_max;
+  } else {
+    var decay = Math.exp(-(now - this.then)/NORMALIZATION_TIME);
+    this.normalization -= (1 - decay) * (this.normalization - slices_max);
+  }
+  this.then = now;
 
   // Color the wheel
   for (var i = 0; i < NUM_SLICES; i++) {
-    this.cw_values[i] = slices.get(i)/slices_max;
+    this.cw_values[i] = slices.get(i)/this.normalization;
   }
   this.cw.draw(this.cw_values);
   requestAnimationFrame(this.animate.bind(this));

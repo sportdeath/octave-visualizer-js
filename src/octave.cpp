@@ -58,7 +58,7 @@ std::vector<float> & Octave::audio_to_slices(const std::vector<float> & audio) {
     float approx_bin = wrapped_freq * slices.size();
     int left_bin = std::floor(approx_bin);
     float right = approx_bin - left_bin;
-    float value = std::norm(window[i]);
+    float value = std::abs(window[i]);
     slices[left_bin % slices.size()] += (1 - right) * value;
     slices[(left_bin + 1) % slices.size()] += right * value;
   }
