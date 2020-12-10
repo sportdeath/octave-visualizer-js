@@ -1,8 +1,10 @@
-function Octave(audioSize, numBins, sampleRate) {
+function Octave(audioSize, sampleRate, numSlices, slicesPerOctave, freqCenter) {
   this.sampleRate = sampleRate;
+  this.slicesPerOctave = slicesPerOctave;
+  this.freqCenterLog = Math.log2(2 * Math.PI * freqCenter);
 
   // Allocate storage
-  this.slices   = new Float32Array(numBins);
+  this.slices   = new Float32Array(numSlices);
   this.windowR  = new Float32Array(audioSize);
   this.windowI  = new Float32Array(audioSize);
   this.windowDR = new Float32Array(audioSize);
@@ -29,7 +31,7 @@ function Octave(audioSize, numBins, sampleRate) {
   }
 }
 
-Octave.prototype.processAudio = function() {
+Octave.prototype.audioToSlices = function() {
   // Reset the slices
   this.slices.fill(0);
 
@@ -54,20 +56,30 @@ Octave.prototype.processAudio = function() {
     var freq = (2 * Math.PI * i * this.sampleRate)/(this.windowR.length);
     var dPhaseDT = (this.windowI[i] * this.windowDR[i] - this.windowR[i] * this.windowDI[i])/norm;
     var freqReassigned = freq + dPhaseDT;
-    var wrappedFreq = Math.log2(freqReassigned) % 1;
+
+    // Only choose centered frequencies
+    var freqReassignedLog = Math.log2(freqReassigned);
+    // TODO
+    // if (Math.abs(freqReassignedLog - Math.log2(freq)) > 0.01) continue;
+
+    // Log freq
+    var freqRelLog = freqReassignedLog - this.freqCenterLog;
+    var bin = freqRelLog * this.slicesPerOctave + this.slices.length/2;
 
     // Place it in a bin
-    var value = Math.sqrt(norm);
-    this.placeSlice(wrappedFreq, value);
+    // TODO
+    // var value = Math.sqrt(norm);
+    var value = norm;
+    this.placeSlice(bin, value);
   }
 }
 
-Octave.prototype.placeSlice = function(position, value) {
-  var bin = position * this.slices.length;
+Octave.prototype.placeSlice = function(bin, value) {
   var leftOfBin = Math.floor(bin);
+  if (leftOfBin < 0 || leftOfBin + 1 >= this.slices.length) return;
   var rightPercent = bin - leftOfBin;
-  this.slices[leftOfBin % this.slices.length] += (1 - rightPercent) * value;
-  this.slices[(leftOfBin + 1) % this.slices.length] += rightPercent * value;
+  this.slices[leftOfBin] += (1 - rightPercent) * value;
+  this.slices[(leftOfBin + 1)] += rightPercent * value;
 }
 
 Octave.prototype.fft = function(real, imag) {

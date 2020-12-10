@@ -1,6 +1,8 @@
 const FFT_SIZE = 2048;
-const NUM_SLICES = 48;
-const NORMALIZATION_TIME = 2000; // Milliseconds
+const NUM_SLICES = 1000;
+const SLICES_PER_OCTAVE = 24;
+const FREQ_CENTER = 2500; // HZ
+const NORMALIZATION_TIME = 200; // Milliseconds
 
 function HarmonicVisualizer() {
   // Set up the audio
@@ -21,10 +23,10 @@ HarmonicVisualizer.prototype.onStream = function(stream) {
   this.audio_in.connect(this.analyser);
 
   // Initialize the color wheel
-  this.cw = new ColorWheel(NUM_SLICES);
+  this.cw = new ColorWheel(NUM_SLICES, SLICES_PER_OCTAVE);
 
   // Initialize the octave
-  this.octave = new Octave(FFT_SIZE, NUM_SLICES, this.ctx.sampleRate);
+  this.octave = new Octave(FFT_SIZE, this.ctx.sampleRate, NUM_SLICES, SLICES_PER_OCTAVE, FREQ_CENTER);
 
   // Initialize normalization
   this.normalization = 0;
@@ -39,7 +41,7 @@ HarmonicVisualizer.prototype.animate = function() {
   this.analyser.getFloatTimeDomainData(this.octave.audio);
 
   // Extract the harmonic components
-  this.octave.processAudio();
+  this.octave.audioToSlices();
 
   // Compute normalization
   var slicesMax = Math.max(...this.octave.slices);
@@ -51,11 +53,11 @@ HarmonicVisualizer.prototype.animate = function() {
     this.normalization -= (1 - decay) * (this.normalization - slicesMax);
   }
   this.then = now;
-
-  // Color the wheel
   for (var i = 0; i < this.octave.slices.length; i++) {
     this.octave.slices[i] /= this.normalization;
   }
+
+  // Color the wheel
   this.cw.draw(this.octave.slices);
   requestAnimationFrame(this.animate.bind(this));
 }

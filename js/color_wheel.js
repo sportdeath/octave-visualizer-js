@@ -66,13 +66,9 @@ ColorWheel.prototype.draw = function(values) {
 
   // Color the slices
   for (var i = 0; i < this.slices.length; i++) {
-    var value = Math.random();
     var hue = i/this.slicesPerOctave % 1;
-    var rgb = hsv2rgb(hue, value);
+    var rgb = hsv2rgb(hue, values[i]);
     this.slices[i].setAttribute("fill", `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`);
-    if (i == Math.floor(this.slices.length/2)) {
-      this.slices[i].setAttribute("fill", "white");
-    }
   }
 }
 
