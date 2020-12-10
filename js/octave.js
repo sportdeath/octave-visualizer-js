@@ -10,8 +10,6 @@ function Octave(audioSize, numBins, sampleRate) {
   this.audio    = new Float32Array(audioSize);
   this.hann     = new Float32Array(audioSize);
   this.hannD    = new Float32Array(audioSize);
-  this.windowI.fill(0);
-  this.windowDI.fill(0);
 
   // Precompute the Hann windows
   for (var i = 0; i < audioSize; i++) { 
@@ -32,19 +30,26 @@ Octave.prototype.processAudio = function() {
     this.windowR [i] = this.hann [i] * this.audio[i];
     this.windowDR[i] = this.hannD[i] * this.audio[i];
   }
+  this.windowI.fill(0);
+  this.windowDI.fill(0);
   
   // Compute the FFT
-  //FFT(this.windowR, this.windowI, 0, 1);
+  FFT(this.windowR, this.windowI);
+  FFT(this.windowDR, this.windowDI);
 
   // Wrap it to the octave
   for (var i = 1; i < this.windowR.length/2 + 1; i++) {
+    // Precompute the norm
+    var norm = this.windowR[i] * this.windowR[i] + this.windowI[i] * this.windowI[i]; 
+
     // Compute the frequency
     var freq = (2 * Math.PI * i * this.sampleRate)/(this.windowR.length);
-    var wrappedFreq = Math.log2(freq) % 1;
+    var dPhaseDT = (this.windowI[i] * this.windowDR[i] - this.windowR[i] * this.windowDI[i])/norm;
+    var freqReassigned = freq + dPhaseDT;
+    var wrappedFreq = Math.log2(freqReassigned) % 1;
 
     // Find the bin
-    var value = abs(this.windowR[i], this.windowI[i]);
-    this.placeSlice(wrappedFreq, value);
+    this.placeSlice(wrappedFreq, Math.sqrt(norm));
   }
 }
 
@@ -56,17 +61,67 @@ Octave.prototype.placeSlice = function(position, value) {
   this.slices[(leftOfBin + 1) % this.slices.length] += rightPercent * value;
 }
 
-function norm(r, i) {
-  return r * r + i * i;
-}
-function abs(r, i) {
-  return Math.sqrt(norm(r, i));
-}
+function FFT(real, imag) {
+ // https://www.nayuki.io/res/free-small-fft-in-multiple-languages/fft.js
+ // Length variables
+ var n = real.length;
+ if (n != imag.length)
+  throw "Mismatched lengths";
+ if (n == 1)  // Trivial transform
+  return;
+ var levels = -1;
+ for (var i = 0; i < 32; i++) {
+  if (1 << i == n)
+   levels = i;  // Equal to log2(n)
+ }
+ if (levels == -1)
+  throw "Length is not a power of 2";
 
-//function FFT(R, I, start, skip) {
-  // Recurse on odd and even sections
-  //FFT(R, I, start, skip*2);
-  //FFT(R, I, start+1, skip*2);
+ // Trigonometric tables
+ var cosTable = new Array(n / 2);
+ var sinTable = new Array(n / 2);
+ for (var i = 0; i < n / 2; i++) {
+  cosTable[i] = Math.cos(2 * Math.PI * i / n);
+  sinTable[i] = Math.sin(2 * Math.PI * i / n);
+ }
 
-  //for (var i = start; i < 
-//}
+ // Bit-reversed addressing permutation
+ for (var i = 0; i < n; i++) {
+  var j = reverseBits(i, levels);
+  if (j > i) {
+   var temp = real[i];
+   real[i] = real[j];
+   real[j] = temp;
+   temp = imag[i];
+   imag[i] = imag[j];
+   imag[j] = temp;
+  }
+ }
+
+ // Cooley-Tukey decimation-in-time radix-2 FFT
+ for (var size = 2; size <= n; size *= 2) {
+  var halfsize = size / 2;
+  var tablestep = n / size;
+  for (var i = 0; i < n; i += size) {
+   for (var j = i, k = 0; j < i + halfsize; j++, k += tablestep) {
+    var l = j + halfsize;
+    var tpre =  real[l] * cosTable[k] + imag[l] * sinTable[k];
+    var tpim = -real[l] * sinTable[k] + imag[l] * cosTable[k];
+    real[l] = real[j] - tpre;
+    imag[l] = imag[j] - tpim;
+    real[j] += tpre;
+    imag[j] += tpim;
+   }
+  }
+ }
+
+ // Returns the integer whose value is the reverse of the lowest 'width' bits of the integer 'val'.
+ function reverseBits(val, width) {
+  var result = 0;
+  for (var i = 0; i < width; i++) {
+   result = (result << 1) | (val & 1);
+   val >>>= 1;
+  }
+  return result;
+ }
+}
