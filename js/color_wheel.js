@@ -1,23 +1,60 @@
 // Constants
 const SATURATION = 0.7; // in [0,1]
-const TRIANGLE_FATNESS = 0.01; // radians
-const CIRCLE_RADIUS = 10; // pixels
+const MIN_RADIUS = 0.05; // percent
+const DEVIATION = 2; // octaves
 
-function ColorWheel(numSlices) {
+function ColorWheel(numSlices, slicesPerOctave) {
   // Initialize SVG
   this.svg = createSVGElement('svg', document.body);
   this.svg.addEventListener("click", this.svg.requestFullscreen);
 
-  // Initialize triangles
-  this.triangles = new Array(numSlices);
-  for (var i = 0; i < this.triangles.length; i++) {
-    this.triangles[i] = createSVGElement('polygon', this.svg);
+  // Initialize radial spectrogram
+  this.slices = new Array(numSlices);
+  for (var i = 0; i < this.slices.length; i++) {
+    this.slices[i] = createSVGElement('polygon', this.svg);
   }
+  this.slicesPerOctave = slicesPerOctave;
+  this.angleIncrement = (2 * Math.PI)/slicesPerOctave;
+}
 
-  // Initialize center circle
-  this.circle = createSVGElement('circle', this.svg);
-  this.circle.setAttribute("fill", "black");
-  this.circle.setAttribute("r", CIRCLE_RADIUS.toString());
+ColorWheel.prototype.resize = function() {
+  // Update width and height
+  this.w = this.svg.clientWidth;
+  this.h = this.svg.clientHeight;
+
+  // Compute the total area available
+  var totalArea = (Math.PI * (1 - MIN_RADIUS));
+
+  // Initialize the starting circle
+  var previousRadii = new Array(this.slicesPerOctave+1);
+  previousRadii.fill(MIN_RADIUS);
+  var angle = 0;
+
+  for (var i = 0; i < this.slices.length; i++) {
+    // Compute the area of the slice which is Gaussian
+    var mean = this.slices.length/2;
+    var dev = DEVIATION * this.slicesPerOctave;
+    var rel = (i - mean)/dev;
+    var normal = Math.exp(-0.5 * rel * rel);
+    normal /= dev * Math.sqrt(2 * Math.PI);
+    var area = totalArea * normal;
+
+    // Compute the point that will give the desired radius
+    var bottom0 = previousRadii.shift();
+    var bottom1 = previousRadii[0];
+    var top0    = previousRadii[this.slicesPerOctave-1];
+    var top1    = this.t1(area, bottom0, bottom1, top0);
+    previousRadii.push(top1);
+
+    // Convert to coordinates
+    var pointsStr = "";
+    pointsStr += this.pointStr(bottom0, angle);
+    pointsStr += this.pointStr(   top0, angle);
+    angle += this.angleIncrement;
+    pointsStr += this.pointStr(   top1, angle);
+    pointsStr += this.pointStr(bottom1, angle);
+    this.slices[i].setAttribute("points", pointsStr);
+  }
 }
 
 ColorWheel.prototype.draw = function(values) {
@@ -27,45 +64,27 @@ ColorWheel.prototype.draw = function(values) {
     this.resize();
   }
 
-  // Color the triangles
-  for (var i = 0; i < this.triangles.length; i++) {
-    var hue = i/this.triangles.length;
-    var rgb = hsv2rgb(hue, values[i]);
-    this.triangles[i].setAttribute("fill", `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`);
+  // Color the slices
+  for (var i = 0; i < this.slices.length; i++) {
+    var value = Math.random();
+    var hue = i/this.slicesPerOctave % 1;
+    var rgb = hsv2rgb(hue, value);
+    this.slices[i].setAttribute("fill", `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`);
+    if (i == Math.floor(this.slices.length/2)) {
+      this.slices[i].setAttribute("fill", "white");
+    }
   }
 }
 
-ColorWheel.prototype.resize = function() {
-  // Update width and height
-  this.w = this.svg.clientWidth;
-  this.h = this.svg.clientHeight;
+ColorWheel.prototype.t1 = function(area, b0, b1, t0) {
+  return ((2 * area)/Math.sin(this.angleIncrement) + b0 * b1)/t0;
+}
 
-  // Move circles to center
-  this.circle.setAttribute("cx", this.w/2);
-  this.circle.setAttribute("cy", this.h/2);
-
-  // Move and scale triangles
-  var radius = this.w/2 + this.h/2;
-  for (var i = 0; i < this.triangles.length; i++) {
-    var points = new Array(6);
-    points[0] = 0;
-    points[1] = 0;
-    points[2] = radius * Math.cos(this.indexToAngle(i)-TRIANGLE_FATNESS);
-    points[3] = radius * Math.sin(this.indexToAngle(i)-TRIANGLE_FATNESS);
-    points[4] = radius * Math.cos(this.indexToAngle(i+1)+TRIANGLE_FATNESS);
-    points[5] = radius * Math.sin(this.indexToAngle(i+1)+TRIANGLE_FATNESS);
-
-    // Convert to string for HTML
-    var pointsStr = ""
-    for (var j = 0; j < points.length; j++) {
-      if (j % 2 == 0) {
-        pointsStr += (this.w/2 + points[j]).toString() + ",";
-      } else {
-        pointsStr += (this.h/2 + points[j]).toString() + " ";
-      }
-    }
-    this.triangles[i].setAttribute("points", pointsStr);
-  }
+ColorWheel.prototype.pointStr = function(radius, angle) {
+  var outerRadius = Math.min(this.w, this.h)/2;
+  var x = this.w/2 + outerRadius * radius * Math.cos(angle);
+  var y = this.h/2 + outerRadius * radius * Math.sin(angle);
+  return x.toString() + ", " + y.toString() + " ";
 }
 
 function createSVGElement(type, par) {
@@ -74,14 +93,9 @@ function createSVGElement(type, par) {
   return element;
 }
 
-ColorWheel.prototype.indexToAngle = function(index) {
-  return (2 * Math.PI * index) / this.triangles.length;
-}
-
 function hsv2rgb(hue, value) {
   return [value * hsv_f(5, hue), value * hsv_f(3, hue), value * hsv_f(1, hue)];
 }
-
 function hsv_f(n, hue) {
   var a = (n + hue * 6) % 6;
   var b = Math.max(0, Math.min(a, 4 - a, 1));
