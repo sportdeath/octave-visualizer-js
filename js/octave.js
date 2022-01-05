@@ -1,19 +1,20 @@
-function Octave(audioSize, sampleRate, numSlices, slicesPerOctave, freqCenter) {
+export default class ReassignedFFT {
+
+constructor(windowSize, sampleRate) {
   this.sampleRate = sampleRate;
-  this.slicesPerOctave = slicesPerOctave;
-  this.freqCenterLog = Math.log2(2 * Math.PI * freqCenter);
 
   // Allocate storage
-  this.slices   = new Float32Array(numSlices);
-  this.windowR  = new Float32Array(audioSize);
-  this.windowI  = new Float32Array(audioSize);
-  this.windowDR = new Float32Array(audioSize);
-  this.windowDI = new Float32Array(audioSize);
-  this.audio    = new Float32Array(audioSize);
-  this.hann     = new Float32Array(audioSize);
-  this.hannD    = new Float32Array(audioSize);
-  this.cosTable = new Float32Array(audioSize/2);
-  this.sinTable = new Float32Array(audioSize/2);
+  this.windowR  = new Float32Array(windowSize);
+  this.windowI  = new Float32Array(windowSize);
+  this.windowDR = new Float32Array(windowSize);
+  this.windowDI = new Float32Array(windowSize);
+  this.audio    = new Float32Array(windowSize);
+  this.hann     = new Float32Array(windowSize);
+  this.hannD    = new Float32Array(windowSize);
+  this.cosTable = new Float32Array(windowSize/2);
+  this.sinTable = new Float32Array(windowSize/2);
+  this.freq = new Float32Array(windowSize/2);
+  this.value = new Float32Array(windowSize/2);
 
   // Precompute the Hann windows
   for (var i = 0; i < audioSize; i++) { 
@@ -31,10 +32,7 @@ function Octave(audioSize, sampleRate, numSlices, slicesPerOctave, freqCenter) {
   }
 }
 
-Octave.prototype.audioToSlices = function() {
-  // Reset the slices
-  this.slices.fill(0);
-
+function processWindow() {
   // Window the audio
   for (var i = 0; i < this.windowR.length; i++) {
     this.windowR [i] = this.hann [i] * this.audio[i];
@@ -44,11 +42,12 @@ Octave.prototype.audioToSlices = function() {
   this.windowDI.fill(0);
   
   // Compute the FFT
-  this.fft(this.windowR, this.windowI);
+  this.fft(this.windowR , this.windowI );
   this.fft(this.windowDR, this.windowDI);
 
-  // Wrap it to the octave
+  // Process each FFT bin
   for (var i = 1; i < this.windowR.length/2 + 1; i++) {
+
     // Compute the norm
     var norm = this.windowR[i] * this.windowR[i] + this.windowI[i] * this.windowI[i]; 
 
@@ -57,32 +56,13 @@ Octave.prototype.audioToSlices = function() {
     var dPhaseDT = (this.windowI[i] * this.windowDR[i] - this.windowR[i] * this.windowDI[i])/norm;
     var freqReassigned = freq + dPhaseDT;
 
-    // Only choose centered frequencies
-    var freqReassignedLog = Math.log2(freqReassigned);
-    // TODO
-    // if (Math.abs(freqReassignedLog - Math.log2(freq)) > 0.01) continue;
-
-    // Log freq
-    var freqRelLog = freqReassignedLog - this.freqCenterLog;
-    var bin = freqRelLog * this.slicesPerOctave + this.slices.length/2;
-
-    // Place it in a bin
-    // TODO
-    // var value = Math.sqrt(norm);
-    var value = norm;
-    this.placeSlice(bin, value);
+    // Store in the output vectors
+    this.freq[i-1] = freqReassigned/(2 * Math.PI)
+    this.value[i-1] = norm
   }
 }
 
-Octave.prototype.placeSlice = function(bin, value) {
-  var leftOfBin = Math.floor(bin);
-  if (leftOfBin < 0 || leftOfBin + 1 >= this.slices.length) return;
-  var rightPercent = bin - leftOfBin;
-  this.slices[leftOfBin] += (1 - rightPercent) * value;
-  this.slices[(leftOfBin + 1)] += rightPercent * value;
-}
-
-Octave.prototype.fft = function(real, imag) {
+function fft(real, imag) {
  // https://www.nayuki.io/res/free-small-fft-in-multiple-languages/fft.js
  // Length variables
  var n = real.length;
@@ -119,12 +99,15 @@ Octave.prototype.fft = function(real, imag) {
  }
 
  // Returns the integer whose value is the reverse of the lowest 'width' bits of the integer 'val'.
- function reverseBits(val, width) {
-  var result = 0;
-  for (var i = 0; i < width; i++) {
-   result = (result << 1) | (val & 1);
-   val >>>= 1;
-  }
-  return result;
- }
+}
+
+function reverseBits(val, width) {
+var result = 0;
+for (var i = 0; i < width; i++) {
+ result = (result << 1) | (val & 1);
+ val >>>= 1;
+}
+return result;
+}
+
 }
