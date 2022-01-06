@@ -14,7 +14,7 @@ constructor(elementSelector, numPeaks) {
 
   // Inject an SVG element
   const el = document.querySelector(elementSelector)
-  this.svg = this.createElementNS("http://www.w3.org/2000/svg", 'svg');
+  this.svg = document.createElementNS("http://www.w3.org/2000/svg", 'svg');
   el.appendChild(this.svg)
   this.svg.addEventListener("click", this.svg.requestFullscreen);
 }
@@ -28,7 +28,7 @@ onStream(stream) {
 
   // Initialize the octave
   this.reassignedFFT = new ReassignedFFT(
-    this.fftWindowSize, this.ctx.sampleRate)
+    2*this.numPeaks, this.ctx.sampleRate)
 
   // Animate!
   this.animate();
@@ -52,7 +52,7 @@ animate() {
 
 draw(freq, value) {
   // Override this!
-  console.log(freq, value)
+  console.log(freq[10], value[10])
 }
 
 }
