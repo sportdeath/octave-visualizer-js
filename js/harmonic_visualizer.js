@@ -1,63 +1,50 @@
-const FFT_SIZE = 2048;
-const NUM_SLICES = 1000;
-const SLICES_PER_OCTAVE = 24;
-const FREQ_CENTER = 2500; // HZ
-const NORMALIZATION_TIME = 200; // Milliseconds
+import ReassignedFFT from './reassigned_fft.js'
 
-function HarmonicVisualizer() {
+export default class MicVisualizer {
+
+constructor(
+  fftWindowSize,
+  draw) {
+  this.fftWindowSize = fftWindowSize
+  this.draw = draw
+
   // Set up the audio
   this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-  this.getMicrophoneInput();
-}
 
-HarmonicVisualizer.prototype.getMicrophoneInput = function() {
+  // Get the microphone input
   navigator.mediaDevices.getUserMedia({audio: true})
-  .then(this.onStream.bind(this));
+    .then(this.onStream.bind(this));
 }
 
-HarmonicVisualizer.prototype.onStream = function(stream) {
-  // Fetch the input and connect it to the fft
-  this.audio_in = this.ctx.createMediaStreamSource(stream);
+function onStream(stream) {
+  // Set up an analyzer to grab fftWindowSize'd windows from the stream
+  this.audioIn = this.ctx.createMediaStreamSource(stream);
   this.analyser = this.ctx.createAnalyser();
-  this.analyser.fftSize = FFT_SIZE;
-  this.audio_in.connect(this.analyser);
-
-  // Initialize the color wheel
-  this.cw = new ColorWheel(NUM_SLICES, SLICES_PER_OCTAVE);
+  this.analyser.fftSize = this.fftWindowSize
+  this.audioIn.connect(this.analyser);
 
   // Initialize the octave
-  this.octave = new Octave(FFT_SIZE, this.ctx.sampleRate, NUM_SLICES, SLICES_PER_OCTAVE, FREQ_CENTER);
-
-  // Initialize normalization
-  this.normalization = 0;
-  this.then = Date.now();
+  this.reassignedFFT = new ReassignedFFT(
+    this.fftWindowSize, this.ctx.sampleRate)
 
   // Animate!
   this.animate();
 }
 
-HarmonicVisualizer.prototype.animate = function() {
+function animate() {
   // Fetch the time series
-  this.analyser.getFloatTimeDomainData(this.octave.audio);
+  this.analyser.getFloatTimeDomainData(this.reassignedFFT.audio);
 
   // Extract the harmonic components
-  this.octave.audioToSlices();
+  this.reassignedFFT.processWindow();
 
-  // Compute normalization
-  var slicesMax = Math.max(...this.octave.slices);
-  var now = Date.now();
-  if (slicesMax > this.normalization) {
-    this.normalization = slicesMax;
-  } else {
-    var decay = Math.exp(-(now - this.then)/NORMALIZATION_TIME);
-    this.normalization -= (1 - decay) * (this.normalization - slicesMax);
-  }
-  this.then = now;
-  for (var i = 0; i < this.octave.slices.length; i++) {
-    this.octave.slices[i] /= this.normalization;
-  }
+  // Send them to the visualizer
+  this.draw(
+    this.reassignedFFT.freq,
+    this.reassignedFFT.value)
 
-  // Color the wheel
-  this.cw.draw(this.octave.slices);
+  // Step the animation forwards
   requestAnimationFrame(this.animate.bind(this));
+}
+
 }
