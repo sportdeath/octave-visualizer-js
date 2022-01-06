@@ -1,12 +1,9 @@
 import ReassignedFFT from './reassigned_fft.js'
 
-export default class MicVisualizer {
+export default class BaseVisualizer {
 
-constructor(
-  fftWindowSize,
-  draw) {
-  this.fftWindowSize = fftWindowSize
-  this.draw = draw
+constructor(elementSelector, numPeaks) {
+  this.numPeaks = numPeaks
 
   // Set up the audio
   this.ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -14,13 +11,19 @@ constructor(
   // Get the microphone input
   navigator.mediaDevices.getUserMedia({audio: true})
     .then(this.onStream.bind(this));
+
+  // Inject an SVG element
+  const el = document.querySelector(elementSelector)
+  this.svg = this.createElementNS("http://www.w3.org/2000/svg", 'svg');
+  el.appendChild(this.svg)
+  this.svg.addEventListener("click", this.svg.requestFullscreen);
 }
 
-function onStream(stream) {
+onStream(stream) {
   // Set up an analyzer to grab fftWindowSize'd windows from the stream
   this.audioIn = this.ctx.createMediaStreamSource(stream);
   this.analyser = this.ctx.createAnalyser();
-  this.analyser.fftSize = this.fftWindowSize
+  this.analyser.fftSize = 2*this.numPeaks
   this.audioIn.connect(this.analyser);
 
   // Initialize the octave
@@ -31,7 +34,7 @@ function onStream(stream) {
   this.animate();
 }
 
-function animate() {
+animate() {
   // Fetch the time series
   this.analyser.getFloatTimeDomainData(this.reassignedFFT.audio);
 
@@ -45,6 +48,11 @@ function animate() {
 
   // Step the animation forwards
   requestAnimationFrame(this.animate.bind(this));
+}
+
+draw(freq, value) {
+  // Override this!
+  console.log(freq, value)
 }
 
 }
