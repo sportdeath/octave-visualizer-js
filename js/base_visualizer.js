@@ -2,8 +2,9 @@ import ReassignedFFT from './reassigned_fft.js'
 
 export default class BaseVisualizer {
 
-constructor(elementSelector, numPeaks) {
+constructor(elementSelector, numPeaks, normalizationTC) {
   this.numPeaks = numPeaks
+  this.normalizationTC = normalizationTC
 
   // Set up the audio
   this.ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -26,9 +27,13 @@ onStream(stream) {
   this.analyser.fftSize = 2*this.numPeaks
   this.audioIn.connect(this.analyser);
 
-  // Initialize the octave
+  // Initialize the FFT
   this.reassignedFFT = new ReassignedFFT(
     2*this.numPeaks, this.ctx.sampleRate)
+
+  // Initialize normalization
+  this.then = Date.now()
+  this.normalizationValue = 0
 
   // Animate!
   this.animate();
@@ -38,8 +43,22 @@ animate() {
   // Fetch the time series
   this.analyser.getFloatTimeDomainData(this.reassignedFFT.audio);
 
-  // Extract the harmonic components
+  // Extract the peaks
   this.reassignedFFT.processWindow();
+
+  // Normalize the peak values
+  var maxValue = Math.max(...this.reassignedFFT.value)
+  var now = Date.now();
+  if (maxValue > this.normalizationValue) {
+    this.normalizationValue = maxValue
+  } else {
+    var decay = Math.exp(-(now - this.then)/this.normalizationTC)
+    this.normalizationValue -= (1 - decay) * (this.normalizationValue - maxValue)
+  }
+  this.then = now
+  for (var i = 0; i < this.numPeaks; i++) {
+    this.reassignedFFT.value[i] /= this.normalizationValue
+  }
 
   // Send them to the visualizer
   this.draw(
@@ -52,7 +71,6 @@ animate() {
 
 draw(freq, value) {
   // Override this!
-  console.log(freq[10], value[10])
 }
 
 }

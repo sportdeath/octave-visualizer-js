@@ -56,7 +56,7 @@ export default class ReassignedFFT {
 
       // Store in the output vectors
       this.freq[i-1] = freqReassigned/(2 * Math.PI)
-      this.value[i-1] = norm
+      this.value[i-1] = Math.sqrt(norm)
     }
   }
 
