@@ -56,8 +56,10 @@ export default class BaseVisualizer {
       this.normalizationValue -= (1 - decay) * (this.normalizationValue - maxValue)
     }
     this.then = now
-    for (var i = 0; i < this.numPeaks; i++) {
-      this.reassignedFFT.value[i] /= this.normalizationValue
+    if (this.normalizationValue > 0) {
+      for (var i = 0; i < this.numPeaks; i++) {
+        this.reassignedFFT.value[i] /= this.normalizationValue
+      }
     }
 
     // Send them to the visualizer
