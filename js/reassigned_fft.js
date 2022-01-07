@@ -46,13 +46,17 @@ export default class ReassignedFFT {
 
     // Process each FFT bin
     for (var i = 1; i < this.windowR.length/2 + 1; i++) {
-      // Compute the norm
-      var norm = this.windowR[i] * this.windowR[i] + this.windowI[i] * this.windowI[i]; 
+      // Compute the base frequency
+      var freq = (2 * Math.PI * i * this.sampleRate)/(this.windowR.length)
 
-      // Compute the reassigned frequency
-      var freq = (2 * Math.PI * i * this.sampleRate)/(this.windowR.length);
-      var dPhaseDT = (this.windowI[i] * this.windowDR[i] - this.windowR[i] * this.windowDI[i])/norm;
-      var freqReassigned = freq + dPhaseDT;
+      // Compute the reassigned frequency if it exists
+      var norm = this.windowR[i] * this.windowR[i] + this.windowI[i] * this.windowI[i]
+      if (norm != 0) {
+        var dPhaseDT = (this.windowI[i] * this.windowDR[i] - this.windowR[i] * this.windowDI[i])/norm
+        var freqReassigned = freq + dPhaseDT
+      } else {
+        var freqReassigned = freq
+      }
 
       // Store in the output vectors
       this.freq[i-1] = freqReassigned/(2 * Math.PI)
