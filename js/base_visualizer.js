@@ -1,10 +1,14 @@
 import ReassignedFFT from './reassigned_fft.js'
+import logScaleKDE from './log_scale_kde.js'
 
 export default class BaseVisualizer {
 
   constructor(elementSelector, numPeaks, normalizationTC) {
     this.numPeaks = numPeaks
     this.normalizationTC = normalizationTC
+
+    this.kdeSize = 2000
+    this.kdeStdDev = 20
 
     // Set up the audio
     this.ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -46,8 +50,18 @@ export default class BaseVisualizer {
     // Extract the peaks
     this.reassignedFFT.processWindow();
 
+    // Calculate the log-scale KDE
+    const spectrumLogKDE = logScaleKDE(
+      this.reassignedFFT.freq,
+      this.reassignedFFT.value,
+      20, 20000, // These bounds are the limits of human hearing
+      this.kdeSize,
+      this.kdeStdDev)
+
+    // Apply the A-weighting curve
+
     // Normalize the peak values
-    var maxValue = Math.max(...this.reassignedFFT.value)
+    var maxValue = Math.max(...spectrumLogKDE)
     var now = Date.now();
     if (maxValue > this.normalizationValue) {
       this.normalizationValue = maxValue
@@ -57,21 +71,19 @@ export default class BaseVisualizer {
     }
     this.then = now
     if (this.normalizationValue > 0) {
-      for (var i = 0; i < this.numPeaks; i++) {
-        this.reassignedFFT.value[i] /= this.normalizationValue
+      for (var i = 0; i < spectrumLogKDE.length; i++) {
+        spectrumLogKDE[i] /= this.normalizationValue
       }
     }
 
     // Send them to the visualizer
-    this.draw(
-      this.reassignedFFT.freq,
-      this.reassignedFFT.value)
+    this.draw(spectrumLogKDE)
 
     // Step the animation forwards
     requestAnimationFrame(this.animate.bind(this));
   }
 
-  draw(freq, value) {
+  draw(logSpectrum) {
     // Override this!
   }
 
