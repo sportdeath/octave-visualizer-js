@@ -61,50 +61,49 @@ export default class ReassignedFFT {
   }
 
   fft(real, imag) {
-   // https://www.nayuki.io/res/free-small-fft-in-multiple-languages/fft.js
-   // Length variables
-   var n = real.length;
-   var levels = Math.log2(n);
+    // https://www.nayuki.io/res/free-small-fft-in-multiple-languages/fft.js
+    // Length variables
+    var n = real.length;
+    var levels = Math.log2(n);
 
-   // Bit-reversed addressing permutation
-   for (var i = 0; i < n; i++) {
-    var j = ReassignedFFT.reverseBits(i, levels);
-    if (j > i) {
-     var temp = real[i];
-     real[i] = real[j];
-     real[j] = temp;
-     temp = imag[i];
-     imag[i] = imag[j];
-     imag[j] = temp;
+    // Bit-reversed addressing permutation
+    for (var i = 0; i < n; i++) {
+      var j = ReassignedFFT.reverseBits(i, levels);
+      if (j > i) {
+        var temp = real[i];
+        real[i] = real[j];
+        real[j] = temp;
+        temp = imag[i];
+        imag[i] = imag[j];
+        imag[j] = temp;
+      }
     }
-   }
 
-   // Cooley-Tukey decimation-in-time radix-2 FFT
-   for (var size = 2; size <= n; size *= 2) {
-    var halfsize = size / 2;
-    var tablestep = n / size;
-    for (var i = 0; i < n; i += size) {
-     for (var j = i, k = 0; j < i + halfsize; j++, k += tablestep) {
-      var l = j + halfsize;
-      var tpre =  real[l] * this.cosTable[k] + imag[l] * this.sinTable[k];
-      var tpim = -real[l] * this.sinTable[k] + imag[l] * this.cosTable[k];
-      real[l] = real[j] - tpre;
-      imag[l] = imag[j] - tpim;
-      real[j] += tpre;
-      imag[j] += tpim;
-     }
+    // Cooley-Tukey decimation-in-time radix-2 FFT
+    for (var size = 2; size <= n; size *= 2) {
+      var halfsize = size / 2;
+      var tablestep = n / size;
+      for (var i = 0; i < n; i += size) {
+        for (var j = i, k = 0; j < i + halfsize; j++, k += tablestep) {
+          var l = j + halfsize;
+          var tpre =  real[l] * this.cosTable[k] + imag[l] * this.sinTable[k];
+          var tpim = -real[l] * this.sinTable[k] + imag[l] * this.cosTable[k];
+          real[l] = real[j] - tpre;
+          imag[l] = imag[j] - tpim;
+          real[j] += tpre;
+          imag[j] += tpim;
+        }
+      }
     }
-   }
   }
 
   // Returns the integer whose value is the reverse of the lowest 'width' bits of the integer 'val'.
   static reverseBits(val, width) {
     var result = 0;
     for (var i = 0; i < width; i++) {
-     result = (result << 1) | (val & 1);
-     val >>>= 1;
+      result = (result << 1) | (val & 1);
+      val >>>= 1;
     }
     return result;
   }
-
 }
