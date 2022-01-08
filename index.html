@@ -5,10 +5,13 @@
 <link rel="stylesheet" type="text/css" href="style.css">
 </head>
 <body>
+  <button onclick="startVisualizer()">click me to start :^)</button>
   <div id="vis"></div>
   <script type="module">
     import SpectrumVisualizer from './js/spectrum_visualizer.js'
-    var v = new SpectrumVisualizer('#vis', 1024, 2000)
+    window.startVisualizer = function() {
+      var v = new SpectrumVisualizer('#vis', 1024, 2000)
+    }
   </script>
 </body>
 </html>
