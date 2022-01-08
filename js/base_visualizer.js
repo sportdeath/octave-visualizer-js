@@ -1,5 +1,6 @@
 import ReassignedFFT from './reassigned_fft.js'
 import logScaleKDE from './log_scale_kde.js'
+import aWeighting from './a_weighting.js'
 
 export default class BaseVisualizer {
 
@@ -8,7 +9,7 @@ export default class BaseVisualizer {
     this.normalizationTC = normalizationTC
 
     this.kdeSize = 2000
-    this.kdeStdDev = 20
+    this.kdeStdDev = 10
 
     // Set up the audio
     this.ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -50,6 +51,11 @@ export default class BaseVisualizer {
     // Extract the peaks
     this.reassignedFFT.processWindow();
 
+    // Apply the A-weighting curve
+    for (var i = 0; i < this.reassignedFFT.freq.length; i++) {
+      this.reassignedFFT.value[i] *= aWeighting(this.reassignedFFT.freq[i])
+    }
+
     // Calculate the log-scale KDE
     const spectrumLogKDE = logScaleKDE(
       this.reassignedFFT.freq,
@@ -57,8 +63,6 @@ export default class BaseVisualizer {
       20, 20000, // These bounds are the limits of human hearing
       this.kdeSize,
       this.kdeStdDev)
-
-    // Apply the A-weighting curve
 
     // Normalize the peak values
     var maxValue = Math.max(...spectrumLogKDE)
